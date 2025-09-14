@@ -1,15 +1,12 @@
-from .bs4ParseTable import bs4Parsed
+from bs4ParseTable import bs4Parsed
 import re
-from sentence_transformers import SentenceTransformer
-from collections import defaultdict
 
-def find_eps_item(html):
-    parsed = bs4Parsed(html, source='0000066570-20-000013')
 
-    model = SentenceTransformer("bge-base-en-honsec10k-embed")
-    sentence = 'basic earnings per share common shareholders'
+def find_eps_item(html, model, source_name):
+    parsed = bs4Parsed(html, source=source_name)
+
+    sentence = 'GAAP basic net income or earnings per share common for shareholders'
     sentence_embedded = model.encode(sentence)
-    sim_result = defaultdict(list)
 
     str_to_remove = r'\n| |\xa0|\\xa0|\u3000|\\u3000|\\u0020|\u0020|\t|\r'  
 
@@ -19,16 +16,19 @@ def find_eps_item(html):
 
     for tb in parsed.tables:
         for tr in tb.rows:
-            tds = [re.sub(str_to_remove," ",td.text) for td in tr.cells]
-            if not tds:
-                continue
-            td_embedded = model.encode(' '.join(tds))
-            similarity = float(model.similarity(sentence_embedded, td_embedded))
-            if similarity > max_sim:
-                max_sim = similarity
-                tb_idx = tb.idx
-                tr_idx = tr.idx
-
-    setattr(parsed[tb_idx][tr_idx],'similarity',similarity)
+            for td in tr.cells:
+                td.text = re.sub(str_to_remove,' ',td.text)
+                if not td or td==' ':
+                    continue
+                td_embedded = model.encode(td.text)
+                similarity = float(model.similarity(sentence_embedded, td_embedded))
+                if similarity > max_sim:
+                    max_sim = similarity
+                    tb_idx = tb.idx
+                    tr_idx = tr.idx
+                    td_idx = td.idx
+    setattr(parsed,'max_similarity',max_sim)
     setattr(parsed,'tb_idx',tb_idx)
+    setattr(parsed,'tr_idx',tr_idx)
+    setattr(parsed,'td_idx',td_idx)
     return parsed

@@ -4,20 +4,20 @@ import mdpd
 
 
 class TableData:
-    def __init__(self, td):
+    def __init__(self, td, idx=None):
         self.td = td
+        self.idx = idx
         self.text = td.get_text(strip=True)
-        self.attrs = td.attrs
 
     def __repr__(self):
-        return f"TableData(text={self.text!r}, attrs={self.attrs})"
+        return f"TableData(idx={self.idx}, text={self.text!r})"
 
 
 class TableRow:
     def __init__(self, tr, idx=None):
         self.tr = tr
         self.idx = idx
-        self.cells = [TableData(td) for td in tr.find_all(['td','th'])]
+        self.cells = [TableData(td, idx=i) for i, td in enumerate(tr.find_all(['td','th']))]
 
     def __getitem__(self, i):
         return self.cells[i]
