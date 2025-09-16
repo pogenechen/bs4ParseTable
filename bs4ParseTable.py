@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 import mdpd
+import re
 
 
 class TableData:
@@ -46,10 +47,11 @@ class Table:
 
     def __len__(self):
         return len(self.rows)
-    
+
     @property
     def markdown(self):
-        return md(str(self.table))
+        pattern = r"\((\d+(?:\.\d+)?)\)?"
+        return re.sub(pattern, r'-\1', md(str(self.table)))
 
     @property
     def df(self):
@@ -58,7 +60,12 @@ class Table:
         _df.columns = range(len(_df.columns))
         _df.index = range(len(_df))
         return _df
-    
+
+    @property
+    def pure_text(self):
+      pattern = '[^A-Za-z0-9 ]'
+      return re.sub(pattern,'',self.markdown)
+
 class bs4Parsed(BeautifulSoup):
     def __init__(self, markup, source, features='html.parser', **kwargs):
         self.features = features
@@ -67,14 +74,14 @@ class bs4Parsed(BeautifulSoup):
         for k,v in kwargs.items():
             setattr(self, k, v)
         super().__init__(markup, features=features)
-    
+
     def __repr__(self):
         attrs = [f"{k}={v!r}" for k,v in self.kwargs.items()]
         return f"bs4Parsed({','.join(attrs)})"
-    
+
     def __getitem__(self,i):
         return self.tables[i]
-    
+
     @property
     def tables(self):
         tbs = self.find_all('table')
